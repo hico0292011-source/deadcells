@@ -2,384 +2,358 @@
 <html lang="uz">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Dead Cells 2D - Dark Edition</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Hill Climb Racing - Telegram Mini App</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; touch-action: manipulation; user-select: none; }
-        body {
-            background: #090a0f;
-            color: #fff;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
+        * { margin: 0; padding: 0; box-sizing: border-box; touch-action: none; user-select: none; }
+        body { background: #87CEEB; overflow: hidden; font-family: 'Arial', sans-serif; }
+        canvas { display: block; }
+        
+        /* Boshqaruv tugmalari */
+        .controls { position: absolute; bottom: 20px; width: 100%; display: flex; justify-content: space-between; padding: 0 30px; pointer-events: none; }
+        .btn { 
+            width: 80px; height: 80px; 
+            background: rgba(0, 0, 0, 0.4); 
+            border: 3px solid rgba(255,255,255,0.6);
+            border-radius: 50%; 
+            color: white; font-size: 16px; font-weight: bold;
+            display: flex; align-items: center; justify-content: center;
+            pointer-events: auto; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            text-transform: uppercase; letter-spacing: 1px;
         }
+        .btn:active { background: rgba(255, 69, 0, 0.8); transform: scale(0.95); }
 
-        #game-container {
-            position: relative;
-            width: 100%;
-            max-width: 500px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+        /* Interfeys: Yoqilg'i va Masofa */
+        .ui { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 400px; display: flex; flex-direction: column; gap: 8px; }
+        .fuel-container { width: 100%; height: 22px; background: rgba(0,0,0,0.5); border-radius: 10px; border: 2px solid white; overflow: hidden; position: relative; }
+        .fuel-bar { height: 100%; background: #00ff00; width: 100%; transition: background 0.3s; }
+        .fuel-text { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: white; font-size: 14px; font-weight: bold; text-shadow: 1px 1px 2px black; }
+        .score { text-align: center; color: white; font-size: 22px; font-weight: 900; text-shadow: 2px 2px 4px rgba(0,0,0,0.8); }
+
+        /* O'yin tugashi ekrani */
+        #gameOver {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); display: none; flex-direction: column;
+            align-items: center; justify-content: center; color: white; z-index: 10;
         }
-
-        canvas {
-            background: #0f111a;
-            border: 2px solid #ff0055;
-            border-radius: 12px;
-            box-shadow: 0 0 25px rgba(255, 0, 85, 0.4), inset 0 0 15px rgba(0,0,0,0.8);
-            width: 100%;
-            max-width: 460px;
-            height: auto;
+        #gameOver h1 { font-size: 36px; color: #ff4757; margin-bottom: 10px; }
+        #gameOver p { font-size: 20px; margin-bottom: 20px; }
+        .restart-btn {
+            padding: 15px 30px; background: #2ed573; border: none; border-radius: 8px;
+            color: white; font-size: 20px; font-weight: bold; cursor: pointer;
         }
-
-        /* Boshqaruv tugmalari - Glassmorphism UI */
-        #controls {
-            width: 100%;
-            max-width: 460px;
-            margin-top: 15px;
-            display: flex;
-            justify-content: space-between;
-            padding: 0 10px;
-        }
-
-        .btn-group { display: flex; gap: 12px; }
-
-        .btn {
-            width: 62px;
-            height: 62px;
-            background: rgba(255, 255, 255, 0.08);
-            backdrop-filter: blur(8px);
-            border: 2px solid rgba(255, 255, 255, 0.2);
-            border-radius: 16px;
-            color: #fff;
-            font-size: 24px;
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-            transition: all 0.1s ease;
-        }
-
-        .btn:active {
-            transform: scale(0.92);
-            background: rgba(0, 240, 255, 0.3);
-            border-color: #00f0ff;
-            box-shadow: 0 0 20px #00f0ff;
-        }
-
-        .btn-attack {
-            background: rgba(255, 0, 85, 0.2);
-            border-color: rgba(255, 0, 85, 0.5);
-        }
-
-        .btn-attack:active {
-            background: rgba(255, 0, 85, 0.6);
-            border-color: #ff0055;
-            box-shadow: 0 0 25px #ff0055;
-        }
+        .restart-btn:active { transform: scale(0.95); background: #27ae60; }
     </style>
 </head>
 <body>
 
-    <div id="game-container">
-        <canvas id="gameCanvas" width="460" height="300"></canvas>
+    <canvas id="gameCanvas"></canvas>
 
-        <div id="controls">
-            <div class="btn-group">
-                <div class="btn" id="btnLeft">◀</div>
-                <div class="btn" id="btnRight">▶</div>
-            </div>
-            <div class="btn-group">
-                <div class="btn" id="btnJump">▲</div>
-                <div class="btn btn-attack" id="btnAttack">⚔️</div>
-            </div>
+    <div class="ui">
+        <div class="score"><span id="distText">0</span> m</div>
+        <div class="fuel-container">
+            <div class="fuel-bar" id="fuelBar"></div>
+            <div class="fuel-text">Yoqilg'i</div>
         </div>
+    </div>
+
+    <div class="controls">
+        <div class="btn" id="btnBrake">Tormoz</div>
+        <div class="btn" id="btnGas">Gaz</div>
+    </div>
+
+    <div id="gameOver">
+        <h1 id="deadReason">Avariya!</h1>
+        <p>Masofa: <span id="finalScore">0</span> m</p>
+        <button class="restart-btn" onclick="initGame()">Qayta boshlash</button>
     </div>
 
     <script>
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
 
-        // O'yin effekti: Ekran titrashi
-        let shakeTime = 0;
+        // Ekranga moslashtirish
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener("resize", resize);
+        resize();
 
-        // Zarrachalar tizimi (Particles)
-        let particles = [];
-        let floatingTexts = [];
+        // Tugmalar holati
+        const keys = { gas: false, brake: false };
+        const btnGas = document.getElementById("btnGas");
+        const btnBrake = document.getElementById("btnBrake");
 
-        function addParticle(x, y, color, count = 5) {
-            for(let i = 0; i < count; i++) {
-                particles.push({
-                    x, y,
-                    vx: (Math.random() - 0.5) * 6,
-                    vy: (Math.random() - 0.5) * 6,
-                    size: Math.random() * 4 + 2,
-                    color: color,
-                    life: 20
-                });
+        const bindBtn = (el, key) => {
+            el.addEventListener("touchstart", (e) => { e.preventDefault(); keys[key] = true; });
+            el.addEventListener("touchend", (e) => { e.preventDefault(); keys[key] = false; });
+            el.addEventListener("mousedown", () => keys[key] = true);
+            el.addEventListener("mouseup", () => keys[key] = false);
+        };
+        bindBtn(btnGas, "gas");
+        bindBtn(btnBrake, "brake");
+
+        // O'yin parametrlari
+        let rw, fw; // Orqa va Old g'ildiraklar (Rear Wheel, Front Wheel)
+        let wheelDist = 70; // G'ildiraklar orasi
+        let gravity = 0.45;
+        let power = 0.8; // Motor kuchi
+        let fuel, distance, maxDistance, isDead;
+        let collectedCans = {};
+        let cameraX = 0, cameraY = 0;
+
+        // Yo'lning baland-pastligi (Matematik to'lqinlar yordamida uzluksiz yo'l generatsiyasi)
+        function getTerrain(x) {
+            return Math.sin(x * 0.005) * 80 + 
+                   Math.sin(x * 0.002) * 150 + 
+                   Math.sin(x * 0.01) * 30 + 400;
+        }
+
+        function initGame() {
+            document.getElementById("gameOver").style.display = "none";
+            fuel = 100;
+            distance = 0;
+            maxDistance = 0;
+            isDead = false;
+            collectedCans = {};
+            
+            // Mashinani boshlang'ich joyga qoyish
+            let startY = getTerrain(100) - 30;
+            rw = { x: 100, y: startY, oldx: 100, oldy: startY };
+            fw = { x: 100 + wheelDist, y: getTerrain(100 + wheelDist) - 30, oldx: 100 + wheelDist, oldy: getTerrain(100 + wheelDist) - 30 };
+            
+            cameraX = rw.x - canvas.width / 4;
+            cameraY = rw.y - canvas.height / 2;
+            
+            gameLoop();
+        }
+
+        // Verlet fizikasi: Nuqtani yangilash
+        function updatePoint(p) {
+            let vx = (p.x - p.oldx) * 0.99; // Havo qarshiligi
+            let vy = (p.y - p.oldy) * 0.99;
+            p.oldx = p.x;
+            p.oldy = p.y;
+            p.x += vx;
+            p.y += vy + gravity;
+        }
+
+        // Verlet fizikasi: G'ildiraklar orasidagi masofani qattiq ushlab turish (Kuzov)
+        function constrain(p1, p2, target) {
+            let dx = p2.x - p1.x;
+            let dy = p2.y - p1.y;
+            let dist = Math.hypot(dx, dy);
+            if (dist === 0) return;
+            let diff = ((target - dist) / dist) * 0.5;
+            let ox = dx * diff;
+            let oy = dy * diff;
+            p1.x -= ox; p1.y -= oy;
+            p2.x += ox; p2.y += oy;
+        }
+
+        // Yer bilan to'qnashuvni tekshirish
+        function collide(p) {
+            let t = getTerrain(p.x);
+            let onGround = false;
+            if (p.y + 15 > t) { // 15 - g'ildirak radiusi
+                p.y = t - 15;
+                // Yerga tekkanda oldingi tezlikni (oldx) sekinlashtirish - Ishqalanish
+                let vx = p.x - p.oldx;
+                p.oldx = p.x - vx * 0.7; 
+                p.oldy = p.y; // Sakrashni to'xtatish
+                onGround = true;
             }
+            return onGround;
         }
 
-        function addFloatingText(x, y, text, color) {
-            floatingTexts.push({ x, y, text, color, opacity: 1, vy: -1.5 });
+        function die(reason) {
+            if (isDead) return;
+            isDead = true;
+            document.getElementById("gameOver").style.display = "flex";
+            document.getElementById("deadReason").innerText = reason;
+            document.getElementById("finalScore").innerText = Math.floor(maxDistance / 10);
         }
-
-        // Personaj (Ritsar)
-        const player = {
-            x: 60, y: 180, w: 26, h: 42,
-            vx: 0, vy: 0,
-            speed: 4, jumpPower: -10,
-            gravity: 0.5,
-            isGrounded: false,
-            hp: 100, maxHp: 100,
-            isAttacking: false,
-            attackTimer: 0,
-            direction: 1,
-            kills: 0
-        };
-
-        // Dushman (Monster)
-        let enemy = {
-            x: 340, y: 180, w: 30, h: 42,
-            hp: 60, maxHp: 60,
-            speed: 1.2, direction: -1,
-            hitTimer: 0
-        };
-
-        const keys = {};
-
-        window.addEventListener("keydown", e => keys[e.code] = true);
-        window.addEventListener("keyup", e => keys[e.code] = false);
-
-        function setupBtn(id, key) {
-            const btn = document.getElementById(id);
-            btn.addEventListener("touchstart", (e) => { e.preventDefault(); keys[key] = true; });
-            btn.addEventListener("touchend", (e) => { e.preventDefault(); keys[key] = false; });
-            btn.addEventListener("mousedown", () => keys[key] = true);
-            btn.addEventListener("mouseup", () => keys[key] = false);
-        }
-
-        setupBtn("btnLeft", "ArrowLeft");
-        setupBtn("btnRight", "ArrowRight");
-        setupBtn("btnJump", "Space");
-        setupBtn("btnAttack", "KeyZ");
 
         function update() {
-            // Harakat
-            if (keys["ArrowLeft"] || keys["KeyA"]) { player.vx = -player.speed; player.direction = -1; }
-            else if (keys["ArrowRight"] || keys["KeyD"]) { player.vx = player.speed; player.direction = 1; }
-            else { player.vx = 0; }
+            if (isDead) return;
 
-            // Sakrash
-            if ((keys["Space"] || keys["ArrowUp"]) && player.isGrounded) {
-                player.vy = player.jumpPower;
-                player.isGrounded = false;
-                addParticle(player.x + player.w/2, player.y + player.h, "#00f0ff", 8);
+            // Yoqilg'i mantiqi
+            if (keys.gas || keys.brake) fuel -= 0.08;
+            fuel -= 0.02; // Dvigatel yoniq turgani uchun sarf
+
+            if (fuel <= 0) {
+                fuel = 0;
+                die("Yoqilg'i tugadi!");
             }
 
-            // Hujum
-            if (keys["KeyZ"] && !player.isAttacking) {
-                player.isAttacking = true;
-                player.attackTimer = 12;
+            // G'ildiraklarni tortishish kuchi bo'yicha siljitish
+            updatePoint(rw);
+            updatePoint(fw);
+
+            // Fizika stabil bo'lishi uchun chegaralarni bir necha marta mustahkamlaymiz
+            for(let i=0; i<3; i++) constrain(rw, fw, wheelDist);
+            let rg = collide(rw); // Orqa g'ildirak yerdami?
+            let fg = collide(fw); // Old g'ildirak yerdami?
+            for(let i=0; i<3; i++) constrain(rw, fw, wheelDist);
+
+            // Mashina burchagi
+            let angle = Math.atan2(fw.y - rw.y, fw.x - rw.x);
+
+            // Boshqaruv (Gaz va Tormoz)
+            if (keys.gas) {
+                if (rg || fg) { // Yerdamiz, olg'a yuramiz
+                    rw.oldx -= Math.cos(angle) * power;
+                    rw.oldy -= Math.sin(angle) * power;
+                    fw.oldx -= Math.cos(angle) * power;
+                } else { // Havoda aylanib ketish (Wheelie / Orqaga og'ish)
+                    fw.oldy += power * 0.4;
+                    rw.oldy -= power * 0.4;
+                }
             }
-
-            if (player.isAttacking) {
-                player.attackTimer--;
-                if (player.attackTimer <= 0) player.isAttacking = false;
-            }
-
-            // Fizika
-            player.vy += player.gravity;
-            player.x += player.vx;
-            player.y += player.vy;
-
-            // Platforma (Zamin)
-            const groundY = 220;
-            if (player.y + player.h >= groundY) {
-                player.y = groundY - player.h;
-                player.vy = 0;
-                player.isGrounded = true;
-            }
-
-            if (player.x < 0) player.x = 0;
-            if (player.x + player.w > canvas.width) player.x = canvas.width - player.w;
-
-            // Dushman harakati
-            enemy.x += enemy.speed * enemy.direction;
-            if (enemy.x <= 120 || enemy.x >= 380) enemy.direction *= -1;
-
-            // Hujum zarbasi
-            if (player.isAttacking && player.attackTimer === 8) {
-                const swordRange = player.direction === 1 
-                    ? (player.x + player.w < enemy.x && player.x + player.w + 45 > enemy.x)
-                    : (player.x > enemy.x && player.x - 45 < enemy.x + enemy.w);
-
-                if (swordRange && Math.abs(player.y - enemy.y) < 35) {
-                    const dmg = Math.floor(Math.random() * 10) + 20;
-                    enemy.hp -= dmg;
-                    enemy.hitTimer = 10;
-                    shakeTime = 8; // Ekran qimirlaydi
-
-                    addParticle(enemy.x + enemy.w/2, enemy.y + enemy.h/2, "#ff0055", 15);
-                    addFloatingText(enemy.x, enemy.y - 10, `-${dmg}`, "#ff0055");
-
-                    if (enemy.hp <= 0) {
-                        player.kills++;
-                        addFloatingText(enemy.x, enemy.y - 20, "KILL!", "#00f0ff");
-                        enemy.x = 380;
-                        enemy.hp = enemy.maxHp;
-                    }
+            if (keys.brake) {
+                if (rg || fg) { // Tormoz / Orqaga yurish
+                    rw.oldx += Math.cos(angle) * power;
+                    rw.oldy += Math.sin(angle) * power;
+                    fw.oldx += Math.cos(angle) * power;
+                } else { // Havoda oldinga og'ish
+                    fw.oldy -= power * 0.4;
+                    rw.oldy += power * 0.4;
                 }
             }
 
-            // Dushman bilan to'qnashuv
-            if (Math.abs(player.x - enemy.x) < 22 && Math.abs(player.y - enemy.y) < 25) {
-                player.hp -= 0.6;
-                shakeTime = 3;
-                addParticle(player.x + player.w/2, player.y + player.h/2, "#ff0000", 2);
+            // Mashina tomiga o'girilib qolsa va yerga tegsa - O'lim
+            let mx = (rw.x + fw.x) / 2;
+            let my = (rw.y + fw.y) / 2;
+            let roofX = mx - Math.sin(angle) * 35; // Mashina tomi X
+            let roofY = my - Math.cos(angle) * 35; // Mashina tomi Y
+            
+            if (roofY > getTerrain(roofX) - 5) {
+                die("Bo'yningiz sindi! ☠️");
+            }
 
-                if (player.hp <= 0) {
-                    alert("☠️ Mag'lub bo'ldingiz!");
-                    player.hp = player.maxHp;
-                    player.x = 60;
-                    player.kills = 0;
+            // Masofa hisobi
+            if (rw.x > maxDistance) maxDistance = rw.x;
+            document.getElementById("distText").innerText = Math.floor(maxDistance / 10);
+            
+            // Yoqilg'i barini yangilash
+            let fBar = document.getElementById("fuelBar");
+            fBar.style.width = fuel + "%";
+            if (fuel > 50) fBar.style.background = "#2ed573";
+            else if (fuel > 20) fBar.style.background = "#ffa502";
+            else fBar.style.background = "#ff4757";
+
+            // Yoqilg'i idishlarini (Kanonlarni) yig'ish (Har 1500 px da bitta chiqadi)
+            let chunk = Math.floor(mx / 1200);
+            let canX = chunk * 1200 + 800;
+            let canY = getTerrain(canX) - 25;
+            
+            if (chunk > 0 && !collectedCans[chunk]) {
+                // Yaqinlashsa oladi
+                if (Math.hypot(mx - canX, my - canY) < 60) {
+                    collectedCans[chunk] = true;
+                    fuel = Math.min(100, fuel + 40); // 40% benzin qo'shiladi
                 }
             }
 
-            // Zarrachalarni yangilash
-            particles.forEach((p, i) => {
-                p.x += p.vx;
-                p.y += p.vy;
-                p.life--;
-                if(p.life <= 0) particles.splice(i, 1);
-            });
-
-            // Matnlarni yangilash
-            floatingTexts.forEach((ft, i) => {
-                ft.y += ft.vy;
-                ft.opacity -= 0.03;
-                if(ft.opacity <= 0) floatingTexts.splice(i, 1);
-            });
-
-            if (shakeTime > 0) shakeTime--;
+            // Kamerani mashinaga ergashishi
+            cameraX += (mx - canvas.width / 4 - cameraX) * 0.1;
+            cameraY += (my - canvas.height / 2 + 50 - cameraY) * 0.1;
         }
 
         function draw() {
-            ctx.save();
-
-            // Ekran titrashi (Shake Effect)
-            if (shakeTime > 0) {
-                ctx.translate((Math.random() - 0.5) * 6, (Math.random() - 0.5) * 6);
-            }
-
-            // Qorong'u Zindon Foni
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            let bgGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-            bgGrad.addColorStop(0, "#0a0c14");
-            bgGrad.addColorStop(1, "#151928");
-            ctx.fillStyle = bgGrad;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Fon zarrachalari (Mash'ala uchqunlari)
-            if(Math.random() < 0.2) {
-                particles.push({
-                    x: Math.random() * canvas.width, y: 220,
-                    vx: (Math.random() - 0.5) * 1, vy: -Math.random() * 2 - 0.5,
-                    size: Math.random() * 2, color: "rgba(255, 150, 0, 0.5)", life: 40
-                });
-            }
-
-            // Zamin (Plitka uslubidagi platforma)
-            ctx.fillStyle = "#1e2436";
-            ctx.fillRect(0, 220, canvas.width, 80);
-            ctx.fillStyle = "#00f0ff";
-            ctx.shadowBlur = 10;
-            ctx.shadowColor = "#00f0ff";
-            ctx.fillRect(0, 220, canvas.width, 3);
-            ctx.shadowBlur = 0; // reset
-
-            // Dushman (Monster)
-            if (enemy.hitTimer > 0) {
-                enemy.hitTimer--;
-                ctx.fillStyle = "#ffffff"; // Urganda oq yoqilishi
-            } else {
-                ctx.fillStyle = "#ff0055";
-            }
-            ctx.fillRect(enemy.x, enemy.y, enemy.w, enemy.h);
-
-            // Dushman HP Chizig'i
-            ctx.fillStyle = "rgba(0,0,0,0.5)";
-            ctx.fillRect(enemy.x, enemy.y - 10, enemy.w, 4);
-            ctx.fillStyle = "#ff0055";
-            ctx.fillRect(enemy.x, enemy.y - 10, (enemy.hp / enemy.maxHp) * enemy.w, 4);
-
-            // Personaj (Ritsar)
-            // Tanasi
-            ctx.fillStyle = "#1b2838";
-            ctx.fillRect(player.x, player.y + 12, player.w, player.h - 12);
-            
-            // Plash / Sharf
-            ctx.fillStyle = "#ff0055";
-            const scarfX = player.direction === 1 ? player.x - 8 : player.x + player.w;
-            ctx.fillRect(scarfX, player.y + 14, 10, 18);
-
-            // Boshidagi Neon Olov (Dead Cells Beheaded uslubi)
-            ctx.shadowBlur = 15;
-            ctx.shadowColor = "#00f0ff";
-            ctx.fillStyle = "#00f0ff";
+            // Orqa fon tog'lar (Parallax)
+            ctx.fillStyle = "#a4b0be";
             ctx.beginPath();
-            ctx.arc(player.x + player.w/2, player.y + 8, 9, 0, Math.PI * 2);
+            for (let i = 0; i < canvas.width; i+=50) {
+                let px = i + (cameraX * 0.2) % 200;
+                ctx.lineTo(i, Math.sin(px * 0.01) * 100 + 250 - cameraY * 0.1);
+            }
+            ctx.lineTo(canvas.width, canvas.height);
+            ctx.lineTo(0, canvas.height);
             ctx.fill();
-            ctx.shadowBlur = 0;
 
-            // Qilich Hujumi Effekti (Neon Trail)
-            if (player.isAttacking) {
-                ctx.shadowBlur = 20;
-                ctx.shadowColor = "#00f0ff";
-                ctx.strokeStyle = "#00f0ff";
-                ctx.lineWidth = 4;
-                ctx.beginPath();
-                const arcX = player.direction === 1 ? player.x + player.w : player.x;
-                ctx.arc(arcX, player.y + 18, 30, player.direction === 1 ? -Math.PI/3 : Math.PI*2/3, player.direction === 1 ? Math.PI/3 : Math.PI*4/3);
-                ctx.stroke();
-                ctx.shadowBlur = 0;
+            ctx.save();
+            ctx.translate(-cameraX, -cameraY);
+
+            // Tuproq yo'lni chizish (Terrain)
+            ctx.fillStyle = "#8B4513"; // Jigarrang tuproq
+            ctx.beginPath();
+            ctx.moveTo(cameraX - 100, cameraY + canvas.height + 100);
+            for (let x = cameraX - 100; x < cameraX + canvas.width + 100; x += 20) {
+                ctx.lineTo(x, getTerrain(x));
+            }
+            ctx.lineTo(cameraX + canvas.width + 100, cameraY + canvas.height + 100);
+            ctx.fill();
+
+            // Yashil o't qoplamasi (Maysa)
+            ctx.strokeStyle = "#2ed573";
+            ctx.lineWidth = 12;
+            ctx.beginPath();
+            for (let x = cameraX - 100; x < cameraX + canvas.width + 100; x += 20) {
+                ctx.lineTo(x, getTerrain(x));
+            }
+            ctx.stroke();
+
+            // Yoqilg'i idishlarini chizish
+            let mx = (rw.x + fw.x) / 2;
+            let startChunk = Math.floor(cameraX / 1200);
+            for (let i = startChunk; i < startChunk + 3; i++) {
+                if (i > 0 && !collectedCans[i]) {
+                    let cx = i * 1200 + 800;
+                    let cy = getTerrain(cx) - 25;
+                    ctx.fillStyle = "#ff4757";
+                    ctx.fillRect(cx - 10, cy - 15, 20, 30);
+                    ctx.fillStyle = "#fff";
+                    ctx.font = "bold 12px Arial";
+                    ctx.fillText("GAS", cx - 12, cy + 5);
+                }
             }
 
-            // Zarrachalarni chizish
-            particles.forEach(p => {
-                ctx.fillStyle = p.color;
-                ctx.fillRect(p.x, p.y, p.size, p.size);
-            });
+            // Mashinani chizish
+            let cx = (rw.x + fw.x) / 2;
+            let cy = (rw.y + fw.y) / 2;
+            let angle = Math.atan2(fw.y - rw.y, fw.x - rw.x);
 
-            // Suzuvchi Zarba Matnlari
-            floatingTexts.forEach(ft => {
-                ctx.fillStyle = ft.color;
-                ctx.font = "bold 14px sans-serif";
-                ctx.fillText(ft.text, ft.x, ft.y);
-            });
+            ctx.translate(cx, cy);
+            ctx.rotate(angle);
 
-            // HUD / Health & Score
-            ctx.fillStyle = "rgba(0,0,0,0.6)";
-            ctx.fillRect(12, 12, 140, 32);
-            ctx.strokeStyle = "rgba(255,255,255,0.2)";
-            ctx.strokeRect(12, 12, 140, 32);
+            // Mashina kuzovi (Jeep dizayni)
+            ctx.fillStyle = "#eccc68"; // Sariq rangli mashina
+            ctx.fillRect(-45, -25, 90, 25); // Asosiy kuzov
+            ctx.fillStyle = "#ff7f50";
+            ctx.fillRect(-20, -50, 45, 25); // Kabina (tom)
+            
+            // Oyna
+            ctx.fillStyle = "#7bed9f";
+            ctx.fillRect(5, -45, 15, 18);
 
-            // Salomatlik bari
-            ctx.fillStyle = "#00f0ff";
-            ctx.shadowBlur = 8;
-            ctx.shadowColor = "#00f0ff";
-            ctx.fillRect(18, 18, (player.hp / player.maxHp) * 128, 8);
-            ctx.shadowBlur = 0;
+            // Haydovchining oddiy boshi
+            ctx.fillStyle = "#ffb8b8";
+            ctx.beginPath(); ctx.arc(-5, -35, 8, 0, Math.PI*2); ctx.fill();
 
-            ctx.fillStyle = "#fff";
-            ctx.font = "bold 11px sans-serif";
-            ctx.fillText(`KILLS: ${player.kills}`, 18, 38);
+            ctx.rotate(-angle);
+            ctx.translate(-cx, -cy);
+
+            // G'ildiraklarni chizish (Aylanadigan)
+            let drawWheel = (w) => {
+                ctx.save();
+                ctx.translate(w.x, w.y);
+                ctx.rotate(w.x * 0.05); // Yurganiga qarab aylanadi
+                ctx.beginPath(); ctx.arc(0, 0, 15, 0, Math.PI*2); 
+                ctx.fillStyle = "#2f3542"; ctx.fill(); // Shina
+                ctx.lineWidth = 3; ctx.strokeStyle = "#ffffff"; ctx.stroke(); // Disk
+                // Disk ichidagi chiziqlar (aylanishni bilish uchun)
+                ctx.fillStyle = "#dfe4ea";
+                ctx.fillRect(-2, -15, 4, 30);
+                ctx.fillRect(-15, -2, 30, 4);
+                ctx.restore();
+            };
+
+            drawWheel(rw);
+            drawWheel(fw);
 
             ctx.restore();
         }
@@ -387,10 +361,12 @@
         function gameLoop() {
             update();
             draw();
-            requestAnimationFrame(gameLoop);
+            if (!isDead) {
+                requestAnimationFrame(gameLoop);
+            }
         }
 
-        gameLoop();
+        initGame();
     </script>
 </body>
 </html>
