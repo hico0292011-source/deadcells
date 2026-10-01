@@ -17,7 +17,7 @@ import google.generativeai as genai
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-BOT_TOKEN = os.environ.get("BOT_TOKEN", "8745387169:AAFgM6SQCt6cheZwmben1R6MDct6W-aUIdo")
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "8745387169:AAFUAM6Y-s9JDfeu0tb2B-nOasd1loLxdrE")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 
 if GEMINI_API_KEY:
