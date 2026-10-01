@@ -2,298 +2,55 @@
 <html lang="uz">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Hill Climb HD - Telegram WebApp</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; font-family: 'Segoe UI', Tahoma, sans-serif; touch-action: none; }
-        body { background: #87CEEB; overflow: hidden; }
-        canvas { display: block; position: absolute; top: 0; left: 0; z-index: 1; }
-        
-        /* Yuqori Panel (Masofa, Tanga, Benzin) */
-        #uiPanel { position: absolute; top: 15px; left: 15px; z-index: 10; background: rgba(0, 0, 0, 0.6); padding: 10px 20px; border-radius: 12px; border: 2px solid rgba(255, 255, 255, 0.2); backdrop-filter: blur(5px); }
-        .stat { font-size: 20px; font-weight: bold; color: white; margin-bottom: 5px; text-shadow: 1px 1px 2px black; }
-        .stat span { color: #f1c40f; }
-        
-        /* Yoqilg'i qutisi */
-        .fuel-box { width: 160px; height: 18px; background: #222; border-radius: 10px; border: 2px solid #fff; overflow: hidden; margin-top: 8px; }
-        #fuelBar { height: 100%; background: #2ecc71; width: 100%; transition: width 0.1s linear, background 0.3s; }
-
-        /* Mobil boshqaruv tugmalari */
-        .controls { position: absolute; bottom: 30px; width: 100%; display: flex; justify-content: space-between; padding: 0 40px; z-index: 10; }
-        .btn { width: 90px; height: 90px; background: rgba(0, 0, 0, 0.5); border: 3px solid rgba(255, 255, 255, 0.6); border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: bold; cursor: pointer; backdrop-filter: blur(4px); transition: 0.1s; text-transform: uppercase; }
-        .btn:active { background: rgba(255, 69, 0, 0.7); transform: scale(0.9); border-color: white; }
-
-        /* Avariya ekrani */
-        #gameOver { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); z-index: 20; display: none; flex-direction: column; align-items: center; justify-content: center; color: white; }
-        #gameOver h1 { font-size: 40px; color: #e74c3c; margin-bottom: 10px; text-shadow: 2px 2px 0px #000; }
-        .restart-btn { margin-top: 20px; padding: 15px 40px; font-size: 22px; font-weight: bold; color: white; background: #2ecc71; border: none; border-radius: 12px; cursor: pointer; box-shadow: 0 5px 0 #27ae60; }
-        .restart-btn:active { transform: translateY(5px); box-shadow: none; }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>PUBG Battle Royale Mini App</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <div class="hud-container">
+        <!-- TOP HUD -->
+        <div class="top-bar">
+            <span>📍 COMPASS: NW 315°</span>
+            <span class="zone">☣️ ZONE: 00:45</span>
+            <span class="alive">👥 ALIVE: <strong id="alive-count">98</strong>/100</span>
+            <span class="kills">☠️ KILLS: <strong id="kills-count">0</strong></span>
+        </div>
 
-    <canvas id="gameCanvas"></canvas>
+        <!-- GAME SCREEN / STORY -->
+        <div class="game-card">
+            <div class="card-header">⚠️ ZONA VIZUAL TAHLILI</div>
+            <div class="story-box" id="story-text">
+                Siz Pochinki zonasiga parashyutda tushdingiz. Bino ichida dushman qadam tovushlari eshitilmoqda...
+            </div>
+        </div>
 
-    <div id="uiPanel">
-        <div class="stat">Masofa: <span id="distText">0</span> m</div>
-        <div class="stat">Tanga: <span id="coinText">0</span></div>
-        <div class="fuel-box"><div id="fuelBar"></div></div>
+        <!-- STATS PANEL -->
+        <div class="stats-panel">
+            <div class="stat-row">
+                <label>HEALTH (HP):</label>
+                <div class="bar-bg"><div class="bar-fill hp-bar" id="hp-bar" style="width: 100%;"></div></div>
+                <span id="hp-val">100/100</span>
+            </div>
+            <div class="stat-row">
+                <label>ARMOR (VEST):</label>
+                <div class="bar-bg"><div class="bar-fill armor-bar" id="armor-bar" style="width: 75%;"></div></div>
+                <span id="armor-val">75/100</span>
+            </div>
+            <div class="info-row">
+                <div>🔫 QUROL: <span id="weapon-val" class="highlight">M416 (30/90)</span></div>
+                <div>🎒 ANJOMLAR: <span id="inv-val">Medkit x2, Granata x1</span></div>
+            </div>
+        </div>
+
+        <!-- ACTION BUTTONS -->
+        <div class="actions-container" id="choices-box">
+            <button class="action-btn" onclick="makeAction(0)">🏠 Bino ichiga kirib loot qilish</button>
+            <button class="action-btn" onclick="makeAction(1)">🚗 Atrofda mashina izlash</button>
+            <button class="action-btn" onclick="makeAction(2)">🎯 Tomga chiqib atroflarni kuzatish</button>
+        </div>
     </div>
 
-    <div class="controls">
-        <div class="btn" id="btnBrake">Tormoz</div>
-        <div class="btn" id="btnGas">Gaz</div>
-    </div>
-
-    <div id="gameOver">
-        <h1 id="deadReason">Bo'yningiz sindi!</h1>
-        <div class="stat" style="font-size: 24px;">Yig'ildi: +<span id="finalCoins">0</span> tanga</div>
-        <button class="restart-btn" onclick="initGame()">Qayta boshlash</button>
-    </div>
-
-    <script>
-        const canvas = document.getElementById("gameCanvas");
-        const ctx = canvas.getContext("2d");
-        
-        function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
-        window.addEventListener("resize", resize); resize();
-
-        // ==========================================
-        // 1. HD GRAFIKALAR (O'yin ichiga joylangan SVG rasmlar)
-        // ==========================================
-        const imgCar = new Image();
-        imgCar.src = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 150 75"><path d="M5,65 L140,65 L145,45 L120,35 L95,10 L30,10 L15,35 L0,50 Z" fill="%23d32f2f" stroke="%23b71c1c" stroke-width="2"/><path d="M30,35 L85,35 L90,15 L35,15 Z" fill="%2381d4fa" opacity="0.8"/><circle cx="135" cy="45" r="6" fill="%23ffeb3b"/><circle cx="5" cy="45" r="4" fill="%23f44336"/><rect x="45" y="35" width="6" height="30" fill="%23000" opacity="0.3"/></svg>`;
-
-        const imgWheel = new Image();
-        imgWheel.src = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="48" fill="%231a1a1a"/><circle cx="50" cy="50" r="36" fill="%232c3e50" stroke="%2334495e" stroke-width="5" stroke-dasharray="10,6"/><circle cx="50" cy="50" r="24" fill="%23bdc3c7" stroke="%2395a5a6" stroke-width="4"/><circle cx="50" cy="50" r="8" fill="%232c3e50"/><path d="M50,26 L50,74 M26,50 L74,50 M33,33 L67,67 M33,67 L67,33" stroke="%237f8c8d" stroke-width="5"/></svg>`;
-
-        const imgCoin = new Image();
-        imgCoin.src = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50"><circle cx="25" cy="25" r="22" fill="%23f1c40f" stroke="%23f39c12" stroke-width="4"/><circle cx="25" cy="25" r="15" fill="%23f1c40f" stroke="%23f39c12" stroke-width="1"/><text x="25" y="33" font-family="Arial" font-size="24" font-weight="bold" fill="%23d35400" text-anchor="middle">5</text></svg>`;
-
-        const imgGas = new Image();
-        imgGas.src = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 50"><rect x="5" y="10" width="30" height="38" fill="%23e74c3c" rx="5"/><rect x="15" y="2" width="10" height="8" fill="%23c0392b"/><path d="M 5,20 L 35,20" stroke="%23fff" stroke-width="3"/><text x="20" y="36" font-family="Arial" font-size="12" font-weight="bold" fill="%23fff" text-anchor="middle">GAS</text></svg>`;
-
-        // ==========================================
-        // 2. BOSHQARUV TIZIMI
-        // ==========================================
-        const keys = { gas: false, brake: false };
-        window.addEventListener("keydown", (e) => {
-            if (e.key.toLowerCase() === 'd' || e.code === 'ArrowRight') keys.gas = true;
-            if (e.key.toLowerCase() === 'a' || e.code === 'ArrowLeft') keys.brake = true;
-        });
-        window.addEventListener("keyup", (e) => {
-            if (e.key.toLowerCase() === 'd' || e.code === 'ArrowRight') keys.gas = false;
-            if (e.key.toLowerCase() === 'a' || e.code === 'ArrowLeft') keys.brake = false;
-        });
-
-        const bindBtn = (id, key) => {
-            const el = document.getElementById(id);
-            el.addEventListener("touchstart", (e) => { e.preventDefault(); keys[key] = true; });
-            el.addEventListener("touchend", (e) => { e.preventDefault(); keys[key] = false; });
-            el.addEventListener("mousedown", () => keys[key] = true);
-            el.addEventListener("mouseup", () => keys[key] = false);
-        };
-        bindBtn("btnGas", "gas"); bindBtn("btnBrake", "brake");
-
-        // ==========================================
-        // 3. FIZIKA VA O'YIN MANTIQI
-        // ==========================================
-        let rw, fw, gravity = 0.45, wDist = 95, carPower = 1.3;
-        let fuel, maxDist, currentCoins, isDead;
-        let cameraX = 0, cameraY = 0;
-        let coinsArr = [], gasCans = [];
-
-        // Yo'l generatsiyasi
-        function getTerrain(x) { 
-            return Math.sin(x * 0.005) * 120 + Math.sin(x * 0.002) * 150 + 400; 
-        }
-
-        function initGame() {
-            document.getElementById("gameOver").style.display = "none";
-            fuel = 100; maxDist = 0; currentCoins = 0; isDead = false;
-            coinsArr = []; gasCans = [];
-            
-            let startY = getTerrain(100) - 40;
-            rw = { x: 100, y: startY, oldx: 100, oldy: startY };
-            fw = { x: 100 + wDist, y: getTerrain(100 + wDist) - 40, oldx: 100 + wDist, oldy: getTerrain(100 + wDist) - 40 };
-            
-            updateUI();
-            if(!requestAnimationFrame(gameLoop)) gameLoop();
-        }
-
-        function updatePoint(p) {
-            let vx = (p.x - p.oldx) * 0.99, vy = (p.y - p.oldy) * 0.99;
-            p.oldx = p.x; p.oldy = p.y;
-            p.x += vx; p.y += vy + gravity;
-        }
-
-        function constrain(p1, p2, target) {
-            let dx = p2.x - p1.x, dy = p2.y - p1.y, dist = Math.hypot(dx, dy);
-            if (dist === 0) return;
-            let diff = ((target - dist) / dist) * 0.5;
-            p1.x -= dx * diff; p1.y -= dy * diff; p2.x += dx * diff; p2.y += dy * diff;
-        }
-
-        function collide(p) {
-            let t = getTerrain(p.x);
-            if (p.y + 22 > t) { // 22 - G'ildirak radiusi
-                p.y = t - 22; p.oldx = p.x - (p.x - p.oldx) * 0.7; p.oldy = p.y; return true;
-            }
-            return false;
-        }
-
-        function die(reason) {
-            if (isDead) return;
-            isDead = true; keys.gas = false; keys.brake = false;
-            document.getElementById("gameOver").style.display = "flex";
-            document.getElementById("deadReason").innerText = reason;
-            document.getElementById("finalCoins").innerText = currentCoins;
-        }
-
-        function update() {
-            if (isDead) return;
-
-            // Yoqilg'i mantiqi
-            fuel -= 0.04; 
-            if (keys.gas || keys.brake) fuel -= 0.08;
-            if (fuel <= 0) die("Yoqilg'i tugadi!");
-
-            // Fizika qadamlari
-            updatePoint(rw); updatePoint(fw);
-            for(let i=0; i<4; i++) constrain(rw, fw, wDist);
-            let rg = collide(rw), fg = collide(fw);
-            for(let i=0; i<4; i++) constrain(rw, fw, wDist);
-
-            let angle = Math.atan2(fw.y - rw.y, fw.x - rw.x);
-            
-            // Mashina tomiga ag'darilsa
-            let mx = (rw.x + fw.x) / 2, my = (rw.y + fw.y) / 2;
-            let roofY = my - Math.cos(angle) * 45;
-            if (roofY > getTerrain(mx) - 10) die("Bo'yningiz sindi!");
-
-            // Dvigatel harakati
-            if (keys.gas) {
-                if (rg || fg) { rw.oldx -= Math.cos(angle) * carPower; fw.oldx -= Math.cos(angle) * carPower; } 
-                else { fw.oldy += carPower * 0.6; rw.oldy -= carPower * 0.6; }
-            }
-            if (keys.brake) {
-                if (rg || fg) { rw.oldx += Math.cos(angle) * carPower; fw.oldx += Math.cos(angle) * carPower; } 
-                else { fw.oldy -= carPower * 0.6; rw.oldy += carPower * 0.6; }
-            }
-
-            // Obyektlarni yig'ish mantiqi (Tangalar va Benzin)
-            let chunk = Math.floor(mx / 900);
-            if (!coinsArr[chunk]) {
-                coinsArr[chunk] = [];
-                for(let i=0; i<4; i++) {
-                    let cx = chunk * 900 + 450 + i * 50;
-                    coinsArr[chunk].push({ x: cx, y: getTerrain(cx) - 35, active: true });
-                }
-            }
-            if (!gasCans[chunk] && chunk > 0) {
-                let gx = chunk * 900 + 800;
-                gasCans[chunk] = { x: gx, y: getTerrain(gx) - 30, active: true };
-            }
-
-            coinsArr.forEach(cG => cG.forEach(c => {
-                if (c.active && Math.hypot(mx - c.x, my - c.y) < 60) {
-                    c.active = false; currentCoins += 5; updateUI();
-                }
-            }));
-            
-            if (gasCans[chunk] && gasCans[chunk].active && Math.hypot(mx - gasCans[chunk].x, my - gasCans[chunk].y) < 70) {
-                gasCans[chunk].active = false; fuel = Math.min(100, fuel + 50); updateUI();
-            }
-
-            if (rw.x > maxDist) maxDist = rw.x;
-            updateUI();
-
-            // Kamerani ergashishi
-            cameraX += (mx - canvas.width / 4 - cameraX) * 0.1;
-            cameraY += (my - canvas.height / 2 - cameraY) * 0.1;
-        }
-
-        function updateUI() {
-            if(isDead) return;
-            document.getElementById("distText").innerText = Math.floor(maxDist / 10);
-            document.getElementById("coinText").innerText = currentCoins;
-            let bar = document.getElementById("fuelBar");
-            bar.style.width = Math.max(0, fuel) + "%";
-            bar.style.background = fuel > 40 ? "#2ecc71" : fuel > 20 ? "#f1c40f" : "#e74c3c";
-        }
-
-        // ==========================================
-        // 4. EKRANGA CHIZISH (RENDER)
-        // ==========================================
-        function draw() {
-            if(isDead) return;
-            
-            // Orqa fon (Osmon)
-            let grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-            grad.addColorStop(0, "#87CEEB");
-            grad.addColorStop(1, "#e0f7fa");
-            ctx.fillStyle = grad;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            ctx.save();
-            ctx.translate(-cameraX, -cameraY);
-
-            // Yer osti (Tuproq)
-            ctx.fillStyle = "#8B4513";
-            ctx.beginPath();
-            ctx.moveTo(cameraX - 100, cameraY + canvas.height + 100);
-            for (let x = cameraX - 100; x < cameraX + canvas.width + 100; x += 20) ctx.lineTo(x, getTerrain(x));
-            ctx.lineTo(cameraX + canvas.width + 100, cameraY + canvas.height + 100);
-            ctx.fill();
-
-            // Ustki qatlam (Maysa - skrinshotdagi kabi och yashil va qalin)
-            ctx.strokeStyle = "#2ed573"; ctx.lineWidth = 18; ctx.lineJoin = "round";
-            ctx.beginPath();
-            for (let x = cameraX - 100; x < cameraX + canvas.width + 100; x += 20) ctx.lineTo(x, getTerrain(x));
-            ctx.stroke();
-
-            // Tanga va Benzinlarni chizish
-            let chunk = Math.floor(cameraX / 900);
-            for(let i = chunk; i <= chunk + 2; i++) {
-                if(coinsArr[i]) {
-                    coinsArr[i].forEach(c => {
-                        if(c.active) ctx.drawImage(imgCoin, c.x - 15, c.y - 15, 30, 30);
-                    });
-                }
-                if(gasCans[i] && gasCans[i].active) {
-                    ctx.drawImage(imgGas, gasCans[i].x - 15, gasCans[i].y - 20, 30, 40);
-                }
-            }
-
-            // Mashinani chizish
-            let cx = (rw.x + fw.x) / 2, cy = (rw.y + fw.y) / 2;
-            let angle = Math.atan2(fw.y - rw.y, fw.x - rw.x);
-            
-            ctx.translate(cx, cy); ctx.rotate(angle);
-            
-            // Kuzov (SVG Image)
-            ctx.drawImage(imgCar, -65, -55, 130, 65);
-            
-            ctx.rotate(-angle); ctx.translate(-cx, -cy);
-
-            // G'ildiraklar (SVG Image, aylanuvchi)
-            const drawWheel = (w) => {
-                ctx.save(); ctx.translate(w.x, w.y); ctx.rotate(w.x * 0.05);
-                ctx.drawImage(imgWheel, -24, -24, 48, 48); // 48x48 razmer
-                ctx.restore();
-            };
-            drawWheel(rw); drawWheel(fw);
-
-            ctx.restore();
-        }
-
-        function gameLoop() {
-            update(); draw(); 
-            if(!isDead) requestAnimationFrame(gameLoop);
-        }
-
-        // Barcha rasmlar o'qilgandan so'ng o'yinni boshlash
-        window.onload = initGame;
-    </script>
+    <script src="app.js"></script>
 </body>
 </html>
